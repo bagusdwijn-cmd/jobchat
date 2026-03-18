@@ -1,61 +1,46 @@
-# Telegram Job Bot - Setup Full Via Telegram
+# JobChat V2 - Telegram Job Apply Bot (Dynamic AI Provider)
 
 Bot Telegram untuk:
-- setup semua data lewat Telegram
+- setup full via Telegram
 - upload CV utama dan dokumen pendukung
-- simpan Gemini API key, Gmail, dan App Password secara terenkripsi
-- kirim gambar lowongan
-- tampilkan preview ringkas
+- pilih AI provider secara dinamis (`gemini`, `openai`, `openrouter`)
+- simpan API key terenkripsi
+- analisa gambar lowongan
+- jika ada banyak posisi, AI memilih posisi yang paling cocok dengan profil user
+- cover letter otomatis menyesuaikan posisi terpilih
+- preview ringkas sebelum kirim
 - kirim email otomatis dengan lampiran aktif
-- lihat daftar lamaran yang sudah dikirim
+- lihat daftar lamaran terkirim
 
-## Flow
-### Setup
+## Flow setup
 1. `/start`
 2. upload CV utama
-3. upload dokumen pendukung
-4. kirim Gemini API key
-5. kirim Gmail address
-6. kirim Gmail App Password
-7. kirim profil singkat
-8. setup selesai
+3. upload dokumen pendukung (opsional), lalu ketik `selesai`
+4. pilih AI provider (`gemini`, `openai`, `openrouter`)
+5. kirim API key provider
+6. kirim model AI atau ketik `default`
+7. kirim Gmail address
+8. kirim Gmail App Password
+9. kirim profil singkat
 
-### Pemakaian
-1. kirim gambar lowongan
-2. bot analisa
-3. bot tampilkan preview:
-   - email HR
-   - nama perusahaan
-   - isi pesan Gmail
-   - lampiran aktif
-4. pilih:
-   - Kirim
-   - Edit
-   - Batal
+## Flow penggunaan
+1. upload gambar lowongan
+2. AI ekstrak perusahaan, email HR, posisi-posisi yang tersedia
+3. AI memilih posisi paling cocok untuk user
+4. AI membuat cover letter yang sesuai posisi terpilih
+5. bot tampilkan preview + tombol Kirim/Edit/Batal
+6. jika Kirim, email dikirim dengan lampiran aktif
 
-### Riwayat
-- `/daftar` untuk daftar lamaran terkirim
-- `/profil` untuk melihat status setup
-- `/lampiran` untuk melihat file aktif
-- `/setcv` untuk ganti CV utama
-- `/tambahlampiran` untuk tambah dokumen
-- `/cancel` untuk membatalkan mode aktif
-
-## Setup lokal
-1. copy `.env.example` menjadi `.env`
-2. isi:
-   - `APP_BOT_TOKEN`
-   - `MASTER_ENCRYPTION_KEY`
-3. install dependency:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. jalankan:
-   ```bash
-   python -m app.main
-   ```
+## Command utama
+- `/start`
+- `/setup`
+- `/profil`
+- `/lampiran`
+- `/setcv`
+- `/tambahlampiran`
+- `/daftar`
+- `/cancel`
 
 ## Catatan
-- Kredensial sensitif disimpan terenkripsi di database.
-- Pesan sensitif dari user dihapus setelah diproses, jika bot memiliki izin.
-- Bot memakai long polling agar mudah dijalankan.
+- Penyimpanan saat ini masih lokal (SQLite + file lokal Railway/VPS).
+- Untuk produksi jangka panjang, idealnya pindah ke PostgreSQL + object storage.

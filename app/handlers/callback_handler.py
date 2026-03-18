@@ -14,12 +14,13 @@ from app.services.mail_service import MailService
 
 def _compact_preview(app: dict) -> str:
     attachments = json.loads(app.get("attachments_json", "[]") or "[]")
-    warnings = []
+    available_positions = json.loads(app.get("available_positions_json", "[]") or "[]")
     confidence = json.loads(app.get("confidence_json", "{}") or "{}")
     preview = DraftPreview(
         company=app.get("company", ""),
-        position=app.get("position", ""),
         email=app.get("hr_email", ""),
+        available_positions=available_positions,
+        selected_position=app.get("selected_position", ""),
         subject=app.get("subject", ""),
         body=app.get("body", ""),
         instructions=app.get("instructions", ""),
@@ -31,6 +32,8 @@ def _compact_preview(app: dict) -> str:
     lines = [
         f"Perusahaan: {preview.company or '-'}",
         f"Email HR: {preview.email or '-'}",
+        f"Posisi tersedia: {', '.join(preview.available_positions) if preview.available_positions else '-'}",
+        f"Posisi dipilih AI: {preview.selected_position or '-'}",
         "",
         "Pesan Gmail:",
         preview.body or "-",
@@ -53,24 +56,15 @@ def get_router(storage, profile_service) -> Router:
     async def send_callback(callback: CallbackQuery) -> None:
         app_id = int(callback.data.split(":")[1])
         app = await storage.get_application(app_id)
-        user = await storage.get_user(callback.message.chat.id)
-        if not app or not user:
+        if not app:
             await callback.answer("Data tidak ditemukan", show_alert=True)
             return
 
         secrets = await profile_service.read_secrets(callback.message.chat.id)
-        mail = MailService(
-            gmail_address=secrets["gmail_address"],
-            gmail_app_password=secrets["gmail_app_password"],
-        )
+        mail = MailService(gmail_address=secrets["gmail_address"], gmail_app_password=secrets["gmail_app_password"])
         attachments = json.loads(app.get("attachments_json", "[]") or "[]")
         try:
-            mail.send_email(
-                to_email=app["hr_email"],
-                subject=app["subject"],
-                body=app["body"],
-                attachments=attachments,
-            )
+            mail.send_email(to_email=app["hr_email"], subject=app["subject"], body=app["body"], attachments=attachments)
             await storage.mark_application_sent(app_id)
             await callback.message.edit_reply_markup(reply_markup=None)
             await callback.message.answer(f"✅ Email berhasil dikirim ke {app['hr_email']}")

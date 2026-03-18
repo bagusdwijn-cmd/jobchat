@@ -3,7 +3,9 @@ from aiogram.fsm.state import State, StatesGroup
 class SetupStates(StatesGroup):
     waiting_cv = State()
     waiting_attachment = State()
-    waiting_gemini_key = State()
+    waiting_provider = State()
+    waiting_ai_key = State()
+    waiting_ai_model = State()
     waiting_gmail = State()
     waiting_app_password = State()
     waiting_profile = State()

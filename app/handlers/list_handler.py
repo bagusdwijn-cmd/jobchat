@@ -17,7 +17,7 @@ def get_router(storage) -> Router:
         lines = ["Daftar lamaran terkirim:\n"]
         for i, app in enumerate(apps, start=1):
             lines.append(
-                f"{i}. {app.get('company') or '-'} - {app.get('position') or '-'}\n"
+                f"{i}. {app.get('company') or '-'} - {app.get('selected_position') or '-'}\n"
                 f"   Email: {app.get('hr_email') or '-'}\n"
                 f"   Status: {app.get('status') or '-'}\n"
                 f"   Waktu: {app.get('sent_at') or app.get('created_at')}"

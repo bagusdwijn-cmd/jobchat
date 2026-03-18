@@ -1,31 +1,24 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
-from PIL import Image
-import google.generativeai as genai
 
 from app.models.schemas import DraftPreview
+from app.services.ai.factory import create_ai_provider
 from app.services.parser_service import extract_json_object
 
 class AIService:
-    def __init__(self, api_key: str, profile_text: str, prompt_template: str):
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
-        self.profile_text = profile_text
-        self.prompt_template = prompt_template
-
-    def build_prompt(self) -> str:
-        return self.prompt_template.replace("{{PROFILE_TEXT}}", self.profile_text)
+    def __init__(self, provider: str, api_key: str, model: str, profile_text: str, prompt_template: str):
+        self.provider = create_ai_provider(provider, api_key, model, prompt_template, profile_text)
 
     async def analyze_job_image(self, image_path: str | Path) -> tuple[DraftPreview, dict]:
-        image = Image.open(image_path)
-        response = self.model.generate_content([self.build_prompt(), image])
-        raw_text = response.text.strip()
+        raw_text, raw_json = await asyncio.to_thread(self.provider.analyze_job_image, image_path)
         data = extract_json_object(raw_text)
         preview = DraftPreview(
             company=data.get("company", ""),
-            position=data.get("position", ""),
             email=data.get("email", ""),
+            available_positions=data.get("available_positions", []) or [],
+            selected_position=data.get("selected_position", ""),
             subject=data.get("subject", ""),
             body=data.get("body", ""),
             instructions=data.get("instructions", ""),

@@ -11,7 +11,6 @@ from app.utils.security import SecretBox
 from app.services.storage_service import StorageService
 from app.services.file_service import FileService
 from app.services.user_profile_service import UserProfileService
-
 from app.handlers.setup_handler import get_router as get_setup_router
 from app.handlers.profile_handler import get_router as get_profile_router
 from app.handlers.job_handler import get_router as get_job_router
@@ -27,14 +26,12 @@ async def main() -> None:
         raise RuntimeError("MASTER_ENCRYPTION_KEY belum diisi di .env")
 
     setup_logger(settings.log_level)
-
     storage = StorageService(settings.db_path)
     await storage.init()
 
     secret_box = SecretBox(settings.master_encryption_key)
     file_service = FileService(BASE_DIR / "storage")
     profile_service = UserProfileService(storage, secret_box)
-
     prompt_template = (BASE_DIR / "app" / "templates" / "job_prompt.txt").read_text(encoding="utf-8")
 
     bot = Bot(token=settings.bot_token)

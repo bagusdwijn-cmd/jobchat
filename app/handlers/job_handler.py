@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
 import logging
-from pathlib import Path
 
 from aiogram import Router, F
 from aiogram.types import Message
@@ -26,9 +24,12 @@ def build_profile_text(user: dict) -> str:
 
 def compact_preview_text(preview: DraftPreview, attachments: list[dict]) -> str:
     attachment_names = [a.get("file_name", "-") for a in attachments]
+    positions_text = ", ".join(preview.available_positions) if preview.available_positions else "-"
     text = (
         f"Perusahaan: {preview.company or '-'}\n"
-        f"Email HR: {preview.email or '-'}\n\n"
+        f"Email HR: {preview.email or '-'}\n"
+        f"Posisi tersedia: {positions_text}\n"
+        f"Posisi dipilih AI: {preview.selected_position or '-'}\n\n"
         f"Pesan Gmail:\n{preview.body or '-'}\n\n"
         f"Lampiran:\n- " + "\n- ".join(attachment_names if attachment_names else ["Tidak ada"])
     )
@@ -47,12 +48,11 @@ def get_router(storage, profile_service, file_service, prompt_template: str) -> 
             return
 
         secrets = await profile_service.read_secrets(message.chat.id)
-        if not secrets["gemini_api_key"] or not secrets["gmail_address"] or not secrets["gmail_app_password"]:
+        if not secrets["ai_api_key"] or not secrets["gmail_address"] or not secrets["gmail_app_password"]:
             await message.answer("Kredensial belum lengkap. Jalankan /setup.")
             return
 
         processing = await message.answer("⏳ Sedang membaca lowongan...")
-
         photo = message.photo[-1]
         job_dir = file_service.job_dir(message.chat.id)
         image_path = job_dir / f"{photo.file_id}.jpg"
@@ -61,7 +61,9 @@ def get_router(storage, profile_service, file_service, prompt_template: str) -> 
 
         try:
             ai_service = AIService(
-                api_key=secrets["gemini_api_key"],
+                provider=secrets["ai_provider"],
+                api_key=secrets["ai_api_key"],
+                model=secrets["ai_model"],
                 profile_text=build_profile_text(user),
                 prompt_template=prompt_template,
             )
@@ -69,11 +71,7 @@ def get_router(storage, profile_service, file_service, prompt_template: str) -> 
             preview = validate_preview(preview)
 
             attachments = [
-                {
-                    "id": f["id"],
-                    "file_name": f["file_name"],
-                    "file_path": f["file_path"],
-                }
+                {"id": f["id"], "file_name": f["file_name"], "file_path": f["file_path"]}
                 for f in await storage.list_user_files(message.chat.id)
                 if f.get("is_active_attachment")
             ]
@@ -82,8 +80,9 @@ def get_router(storage, profile_service, file_service, prompt_template: str) -> 
                 {
                     "chat_id": message.chat.id,
                     "company": preview.company,
-                    "position": preview.position,
                     "hr_email": preview.email,
+                    "available_positions": preview.available_positions,
+                    "selected_position": preview.selected_position,
                     "subject": preview.subject,
                     "body": preview.body,
                     "instructions": preview.instructions,
@@ -96,10 +95,7 @@ def get_router(storage, profile_service, file_service, prompt_template: str) -> 
                 }
             )
 
-            await processing.edit_text(
-                compact_preview_text(preview, attachments),
-                reply_markup=preview_keyboard(app_id),
-            )
+            await processing.edit_text(compact_preview_text(preview, attachments), reply_markup=preview_keyboard(app_id))
         except Exception as exc:
             logger.exception("Failed to analyze image")
             await processing.edit_text(f"❌ Gagal memproses lowongan: {exc}")

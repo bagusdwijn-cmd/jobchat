@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from aiogram import Router, F
+from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
@@ -20,6 +20,8 @@ def get_router(storage) -> Router:
             f"Skills: {user.get('skills') or '-'}\n"
             f"Portfolio: {user.get('portfolio') or '-'}\n"
             f"LinkedIn: {user.get('linkedin') or '-'}\n"
+            f"AI Provider: {user.get('ai_provider') or '-'}\n"
+            f"AI Model: {user.get('ai_model') or '-'}\n"
             f"Setup selesai: {'Ya' if user.get('setup_completed') else 'Belum'}\n"
             f"Gmail: {user.get('gmail_address') or '-'}"
         )

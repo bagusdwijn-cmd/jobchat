@@ -27,17 +27,24 @@ def validate_preview(draft: DraftPreview) -> DraftPreview:
         warnings.append("Email HR tidak valid atau tidak jelas.")
         draft.needs_review = True
 
-    if len((draft.body or "").strip()) < 60:
-        warnings.append("Pesan terlalu pendek.")
+    if not draft.selected_position.strip():
+        warnings.append("Posisi terpilih belum jelas.")
         draft.needs_review = True
 
-    joined = " ".join([draft.instructions, draft.body, draft.subject, draft.company, draft.position])
+    if len((draft.body or "").strip()) < 80:
+        warnings.append("Cover letter terlalu pendek.")
+        draft.needs_review = True
+
+    joined = " ".join([draft.instructions, draft.body, draft.subject, draft.company, draft.selected_position] + draft.available_positions)
     if looks_like_form(joined):
-        warnings.append("Terindikasi apply via form/link, bukan email.")
+        warnings.append("Lowongan terindikasi meminta apply via form/link, bukan email.")
         draft.needs_review = True
 
-    if draft.confidence.email < 0.80:
+    if draft.confidence.email < 0.75:
         warnings.append("Confidence email rendah.")
+        draft.needs_review = True
+    if draft.confidence.selected_position < 0.70:
+        warnings.append("Confidence posisi terpilih rendah.")
         draft.needs_review = True
 
     draft.warnings = warnings

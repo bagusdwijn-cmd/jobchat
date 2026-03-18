@@ -23,7 +23,9 @@ class StorageService:
                     extra_notes TEXT DEFAULT '',
                     gmail_address TEXT DEFAULT '',
                     gmail_app_password_encrypted TEXT DEFAULT '',
-                    gemini_api_key_encrypted TEXT DEFAULT '',
+                    ai_provider TEXT DEFAULT '',
+                    ai_model TEXT DEFAULT '',
+                    ai_api_key_encrypted TEXT DEFAULT '',
                     setup_completed INTEGER DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -45,8 +47,9 @@ class StorageService:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     chat_id INTEGER NOT NULL,
                     company TEXT DEFAULT '',
-                    position TEXT DEFAULT '',
                     hr_email TEXT DEFAULT '',
+                    available_positions_json TEXT DEFAULT '[]',
+                    selected_position TEXT DEFAULT '',
                     subject TEXT DEFAULT '',
                     body TEXT DEFAULT '',
                     instructions TEXT DEFAULT '',
@@ -65,17 +68,14 @@ class StorageService:
 
     async def ensure_user(self, chat_id: int) -> None:
         async with aiosqlite.connect(self.db_path) as db:
-            await db.execute(
-                "INSERT OR IGNORE INTO users (chat_id) VALUES (?)",
-                (chat_id,),
-            )
+            await db.execute("INSERT OR IGNORE INTO users (chat_id) VALUES (?)", (chat_id,))
             await db.commit()
 
     async def update_user_field(self, chat_id: int, field_name: str, value: str | int) -> None:
         allowed = {
             "full_name", "target_title", "skills", "portfolio", "linkedin",
             "extra_notes", "gmail_address", "gmail_app_password_encrypted",
-            "gemini_api_key_encrypted", "setup_completed"
+            "ai_provider", "ai_model", "ai_api_key_encrypted", "setup_completed"
         }
         if field_name not in allowed:
             raise ValueError("Field user tidak diizinkan")
@@ -105,10 +105,7 @@ class StorageService:
     ) -> int:
         async with aiosqlite.connect(self.db_path) as db:
             if is_primary_cv:
-                await db.execute(
-                    "UPDATE user_files SET is_primary_cv = 0 WHERE chat_id = ?",
-                    (chat_id,),
-                )
+                await db.execute("UPDATE user_files SET is_primary_cv = 0 WHERE chat_id = ?", (chat_id,))
             cur = await db.execute(
                 '''
                 INSERT INTO user_files (
@@ -118,8 +115,7 @@ class StorageService:
                 ''',
                 (
                     chat_id, telegram_file_id, file_name, file_path, mime_type,
-                    1 if is_primary_cv else 0,
-                    1 if is_active_attachment else 0,
+                    1 if is_primary_cv else 0, 1 if is_active_attachment else 0,
                 ),
             )
             await db.commit()
@@ -140,15 +136,16 @@ class StorageService:
             cur = await db.execute(
                 '''
                 INSERT INTO applications (
-                    chat_id, company, position, hr_email, subject, body, instructions,
-                    language, needs_review, confidence_json, attachments_json, raw_ai_json, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    chat_id, company, hr_email, available_positions_json, selected_position, subject,
+                    body, instructions, language, needs_review, confidence_json, attachments_json, raw_ai_json, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''',
                 (
                     payload["chat_id"],
                     payload.get("company", ""),
-                    payload.get("position", ""),
                     payload.get("hr_email", ""),
+                    json.dumps(payload.get("available_positions", []), ensure_ascii=False),
+                    payload.get("selected_position", ""),
                     payload.get("subject", ""),
                     payload.get("body", ""),
                     payload.get("instructions", ""),
@@ -173,28 +170,20 @@ class StorageService:
     async def list_applications(self, chat_id: int, only_sent: bool = False) -> list[dict]:
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
+            query = "SELECT * FROM applications WHERE chat_id = ?"
             if only_sent:
-                cur = await db.execute(
-                    "SELECT * FROM applications WHERE chat_id = ? AND status = 'sent' ORDER BY id DESC LIMIT 20",
-                    (chat_id,),
-                )
-            else:
-                cur = await db.execute(
-                    "SELECT * FROM applications WHERE chat_id = ? ORDER BY id DESC LIMIT 20",
-                    (chat_id,),
-                )
+                query += " AND status = 'sent'"
+            query += " ORDER BY id DESC LIMIT 20"
+            cur = await db.execute(query, (chat_id,))
             rows = await cur.fetchall()
             return [dict(r) for r in rows]
 
     async def update_application_field(self, app_id: int, field_name: str, value: str) -> None:
-        allowed = {"hr_email", "subject", "body", "status", "sent_at"}
+        allowed = {"hr_email", "subject", "body", "selected_position", "status", "sent_at"}
         if field_name not in allowed:
             raise ValueError("Field application tidak diizinkan")
         async with aiosqlite.connect(self.db_path) as db:
-            await db.execute(
-                f"UPDATE applications SET {field_name} = ? WHERE id = ?",
-                (value, app_id),
-            )
+            await db.execute(f"UPDATE applications SET {field_name} = ? WHERE id = ?", (value, app_id))
             await db.commit()
 
     async def mark_application_sent(self, app_id: int) -> None:

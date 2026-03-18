@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import logging
-from pathlib import Path
-
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, Document
@@ -10,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 
 from app.handlers.states import SetupStates, UploadModeStates
 
-logger = logging.getLogger(__name__)
+SUPPORTED_PROVIDERS = {"gemini", "openai", "openrouter"}
 
 def get_router(storage, file_service, profile_service) -> Router:
     router = Router()
@@ -26,11 +23,7 @@ def get_router(storage, file_service, profile_service) -> Router:
         await storage.ensure_user(message.chat.id)
         await state.clear()
         await state.set_state(SetupStates.waiting_cv)
-        await message.answer(
-            "Halo, kita setup dulu ya.\n\n"
-            "Langkah 1/6:\n"
-            "Silakan upload CV utama Anda (PDF/DOC/DOCX)."
-        )
+        await message.answer("Halo, kita setup dulu ya.\n\nLangkah 1/8:\nSilakan upload CV utama Anda (PDF/DOC/DOCX).")
 
     @router.message(Command("setup"))
     async def setup_command(message: Message, state: FSMContext) -> None:
@@ -65,12 +58,7 @@ def get_router(storage, file_service, profile_service) -> Router:
             is_active_attachment=True,
         )
         await state.set_state(SetupStates.waiting_attachment)
-        await message.answer(
-            "CV utama tersimpan.\n\n"
-            "Langkah 2/6:\n"
-            "Upload dokumen pendukung satu per satu.\n"
-            "Kalau sudah selesai, ketik: selesai"
-        )
+        await message.answer("CV utama tersimpan.\n\nLangkah 2/8:\nUpload dokumen pendukung satu per satu.\nKalau sudah selesai, ketik: selesai")
 
     @router.message(UploadModeStates.waiting_new_cv, F.document)
     async def handle_replace_cv(message: Message, state: FSMContext) -> None:
@@ -130,22 +118,43 @@ def get_router(storage, file_service, profile_service) -> Router:
         if message.text.strip().lower() != "selesai":
             await message.answer("Upload dokumen lagi atau ketik 'selesai'.")
             return
-        await state.set_state(SetupStates.waiting_gemini_key)
-        await message.answer("Langkah 3/6:\nKirim Gemini API Key Anda.")
+        await state.set_state(SetupStates.waiting_provider)
+        await message.answer("Langkah 3/8:\nPilih AI provider: gemini / openai / openrouter")
 
-    @router.message(SetupStates.waiting_gemini_key, F.text)
-    async def handle_gemini_key(message: Message, state: FSMContext) -> None:
-        await profile_service.save_gemini_key(message.chat.id, message.text.strip())
+    @router.message(SetupStates.waiting_provider, F.text)
+    async def handle_provider(message: Message, state: FSMContext) -> None:
+        provider = message.text.strip().lower()
+        if provider not in SUPPORTED_PROVIDERS:
+            await message.answer("Provider tidak valid. Pilih: gemini / openai / openrouter")
+            return
+        await profile_service.save_ai_provider(message.chat.id, provider)
+        await state.update_data(ai_provider=provider)
+        await state.set_state(SetupStates.waiting_ai_key)
+        await message.answer("Langkah 4/8:\nKirim API key AI provider Anda.")
+
+    @router.message(SetupStates.waiting_ai_key, F.text)
+    async def handle_ai_key(message: Message, state: FSMContext) -> None:
+        await profile_service.save_ai_key(message.chat.id, message.text.strip())
         await _safe_delete_user_message(message)
+        data = await state.get_data()
+        provider = data.get("ai_provider", "gemini")
+        await state.set_state(SetupStates.waiting_ai_model)
+        await message.answer(f"API key {provider} diterima dan disimpan aman.\n\nLangkah 5/8:\nKirim model AI Anda, atau ketik `default`.")
+
+    @router.message(SetupStates.waiting_ai_model, F.text)
+    async def handle_ai_model(message: Message, state: FSMContext) -> None:
+        data = await state.get_data()
+        provider = data.get("ai_provider", "gemini")
+        await profile_service.save_ai_model(message.chat.id, message.text.strip(), provider)
         await state.set_state(SetupStates.waiting_gmail)
-        await message.answer("API Key diterima dan disimpan aman.\n\nLangkah 4/6:\nKirim alamat Gmail Anda.")
+        await message.answer("Langkah 6/8:\nKirim alamat Gmail Anda.")
 
     @router.message(SetupStates.waiting_gmail, F.text)
     async def handle_gmail(message: Message, state: FSMContext) -> None:
         await profile_service.save_gmail_address(message.chat.id, message.text.strip())
         await _safe_delete_user_message(message)
         await state.set_state(SetupStates.waiting_app_password)
-        await message.answer("Alamat Gmail diterima.\n\nLangkah 5/6:\nKirim App Password Gmail Anda.")
+        await message.answer("Langkah 7/8:\nKirim App Password Gmail Anda.")
 
     @router.message(SetupStates.waiting_app_password, F.text)
     async def handle_app_password(message: Message, state: FSMContext) -> None:
@@ -153,8 +162,7 @@ def get_router(storage, file_service, profile_service) -> Router:
         await _safe_delete_user_message(message)
         await state.set_state(SetupStates.waiting_profile)
         await message.answer(
-            "App Password diterima.\n\n"
-            "Langkah 6/6:\n"
+            "Langkah 8/8:\n"
             "Kirim profil singkat Anda. Contoh:\n"
             "Nama: Bagus Dwi\n"
             "Title: Senior Fullstack Engineer\n"
@@ -167,34 +175,14 @@ def get_router(storage, file_service, profile_service) -> Router:
     async def handle_profile(message: Message, state: FSMContext) -> None:
         text = message.text.strip()
         await storage.update_user_field(message.chat.id, "extra_notes", text)
-        full_name = ""
-        target_title = ""
-        skills = ""
-        portfolio = ""
-        linkedin = ""
+        mapping = {"nama:": "full_name", "title:": "target_title", "skills:": "skills", "portfolio:": "portfolio", "linkedin:": "linkedin"}
         for line in text.splitlines():
-            low = line.lower()
-            if low.startswith("nama:"):
-                full_name = line.split(":", 1)[1].strip()
-            elif low.startswith("title:"):
-                target_title = line.split(":", 1)[1].strip()
-            elif low.startswith("skills:"):
-                skills = line.split(":", 1)[1].strip()
-            elif low.startswith("portfolio:"):
-                portfolio = line.split(":", 1)[1].strip()
-            elif low.startswith("linkedin:"):
-                linkedin = line.split(":", 1)[1].strip()
-
-        if full_name:
-            await storage.update_user_field(message.chat.id, "full_name", full_name)
-        if target_title:
-            await storage.update_user_field(message.chat.id, "target_title", target_title)
-        if skills:
-            await storage.update_user_field(message.chat.id, "skills", skills)
-        if portfolio:
-            await storage.update_user_field(message.chat.id, "portfolio", portfolio)
-        if linkedin:
-            await storage.update_user_field(message.chat.id, "linkedin", linkedin)
+            low = line.lower().strip()
+            for prefix, field_name in mapping.items():
+                if low.startswith(prefix):
+                    value = line.split(":", 1)[1].strip()
+                    if value:
+                        await storage.update_user_field(message.chat.id, field_name, value)
 
         await storage.update_user_field(message.chat.id, "setup_completed", 1)
         await state.clear()

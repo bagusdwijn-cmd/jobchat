@@ -7,22 +7,29 @@ TUGAS:
 1. Baca gambar lowongan kerja.
 2. Ekstrak HANYA informasi yang benar-benar terlihat:
    - company
-   - position
    - email
+   - available_positions (daftar semua posisi yang terlihat di lowongan, array string)
    - instructions
    - language
-3. Jika email tidak jelas, kosongkan dan set needs_review=true.
-4. Jika lowongan terlihat meminta apply via form/link, catat di instructions dan set needs_review=true.
-5. Buat subject email profesional.
-6. Buat isi email lamaran yang singkat, profesional, dan relevan.
+3. Jika lowongan berisi banyak posisi, pilih SATU posisi terbaik untuk kandidat berdasarkan PROFIL KANDIDAT dan isi ke `selected_position`.
+4. Cover letter WAJIB menyesuaikan `selected_position`, bukan generik.
+5. Jika email tidak jelas, kosongkan dan set needs_review=true.
+6. Jika lowongan terlihat meminta apply via form/link, catat di instructions dan set needs_review=true.
 7. Jangan mengarang pengalaman atau pencapaian yang tidak diberikan.
-8. Output harus JSON valid saja.
+8. Buat subject email profesional yang menyebut posisi terpilih.
+9. Berikan confidence score 0.0 sampai 1.0 untuk:
+   - company
+   - email
+   - positions
+   - selected_position
+10. Output HARUS JSON valid saja, tanpa markdown dan tanpa penjelasan tambahan.
 
 FORMAT JSON:
 {
   "company": "",
-  "position": "",
   "email": "",
+  "available_positions": [],
+  "selected_position": "",
   "subject": "",
   "body": "",
   "instructions": "",
@@ -30,7 +37,8 @@ FORMAT JSON:
   "needs_review": true,
   "confidence": {
     "company": 0.0,
-    "position": 0.0,
-    "email": 0.0
+    "email": 0.0,
+    "positions": 0.0,
+    "selected_position": 0.0
   }
 }

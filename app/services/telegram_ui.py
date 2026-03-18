@@ -16,11 +16,12 @@ def edit_keyboard(app_id: int) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(text="Edit Email", callback_data=f"editfield:{app_id}:hr_email"),
-                InlineKeyboardButton(text="Edit Pesan", callback_data=f"editfield:{app_id}:body"),
+                InlineKeyboardButton(text="Edit Posisi", callback_data=f"editfield:{app_id}:selected_position"),
             ],
             [
                 InlineKeyboardButton(text="Edit Subject", callback_data=f"editfield:{app_id}:subject"),
-                InlineKeyboardButton(text="⬅️ Kembali", callback_data=f"back:{app_id}"),
-            ]
+                InlineKeyboardButton(text="Edit Pesan", callback_data=f"editfield:{app_id}:body"),
+            ],
+            [InlineKeyboardButton(text="⬅️ Kembali", callback_data=f"back:{app_id}")]
         ]
     )
