@@ -1,46 +1,28 @@
-# JobChat V2 - Telegram Job Apply Bot (Dynamic AI Provider)
+# JobChat V4 Final
 
-Bot Telegram untuk:
-- setup full via Telegram
-- upload CV utama dan dokumen pendukung
-- pilih AI provider secara dinamis (`gemini`, `openai`, `openrouter`)
-- simpan API key terenkripsi
-- analisa gambar lowongan
-- jika ada banyak posisi, AI memilih posisi yang paling cocok dengan profil user
-- cover letter otomatis menyesuaikan posisi terpilih
-- preview ringkas sebelum kirim
-- kirim email otomatis dengan lampiran aktif
-- lihat daftar lamaran terkirim
+Fitur:
+1. Auto apply via email dari foto lowongan.
+2. BabyAGI / AutoGPT style planner.
+3. Cody / Sourcegraph style repo context agent.
 
-## Flow setup
-1. `/start`
-2. upload CV utama
-3. upload dokumen pendukung (opsional), lalu ketik `selesai`
-4. pilih AI provider (`gemini`, `openai`, `openrouter`)
-5. kirim API key provider
-6. kirim model AI atau ketik `default`
-7. kirim Gmail address
-8. kirim Gmail App Password
-9. kirim profil singkat
+Semua API key provider AI diinput lewat Telegram, bukan web dan bukan Railway Variables.
 
-## Flow penggunaan
-1. upload gambar lowongan
-2. AI ekstrak perusahaan, email HR, posisi-posisi yang tersedia
-3. AI memilih posisi paling cocok untuk user
-4. AI membuat cover letter yang sesuai posisi terpilih
-5. bot tampilkan preview + tombol Kirim/Edit/Batal
-6. jika Kirim, email dikirim dengan lampiran aktif
+Railway Variables yang dibutuhkan:
+- APP_BOT_TOKEN
+- MASTER_ENCRYPTION_KEY
+- DB_PATH
+- LOG_LEVEL
 
-## Command utama
-- `/start`
-- `/setup`
-- `/profil`
-- `/lampiran`
-- `/setcv`
-- `/tambahlampiran`
-- `/daftar`
-- `/cancel`
+Provider AI:
+- gemini
+- openai
+- openrouter
+- anthropic
+- groq
+- together
+- custom_compatible
 
-## Catatan
-- Penyimpanan saat ini masih lokal (SQLite + file lokal Railway/VPS).
-- Untuk produksi jangka panjang, idealnya pindah ke PostgreSQL + object storage.
+## Jalankan lokal
+cp .env.example .env
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000

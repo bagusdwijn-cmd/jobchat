@@ -1,8 +1,6 @@
 from __future__ import annotations
-
 import re
 from email_validator import validate_email, EmailNotValidError
-from app.models.schemas import DraftPreview
 
 def normalize_email(value: str) -> str:
     return (value or "").strip().replace(" ", "").replace("\n", "").lower()
@@ -16,36 +14,11 @@ def is_valid_email(value: str) -> bool:
     except EmailNotValidError:
         return False
 
-def looks_like_form(text: str) -> bool:
+def looks_like_apply_form(text: str) -> bool:
     return bool(re.search(r"(apply via form|google form|jobstreet|linkedin|glints|bit\.ly|tinyurl)", text, re.I))
 
-def validate_preview(draft: DraftPreview) -> DraftPreview:
-    draft.email = normalize_email(draft.email)
-    warnings = []
-
-    if not is_valid_email(draft.email):
-        warnings.append("Email HR tidak valid atau tidak jelas.")
-        draft.needs_review = True
-
-    if not draft.selected_position.strip():
-        warnings.append("Posisi terpilih belum jelas.")
-        draft.needs_review = True
-
-    if len((draft.body or "").strip()) < 80:
-        warnings.append("Cover letter terlalu pendek.")
-        draft.needs_review = True
-
-    joined = " ".join([draft.instructions, draft.body, draft.subject, draft.company, draft.selected_position] + draft.available_positions)
-    if looks_like_form(joined):
-        warnings.append("Lowongan terindikasi meminta apply via form/link, bukan email.")
-        draft.needs_review = True
-
-    if draft.confidence.email < 0.75:
-        warnings.append("Confidence email rendah.")
-        draft.needs_review = True
-    if draft.confidence.selected_position < 0.70:
-        warnings.append("Confidence posisi terpilih rendah.")
-        draft.needs_review = True
-
-    draft.warnings = warnings
-    return draft
+def redact_secrets(text: str) -> str:
+    text = re.sub(r"AIza[0-9A-Za-z\-_]{20,}", "[REDACTED_API_KEY]", text)
+    text = re.sub(r"sk-[A-Za-z0-9\-_]+", "[REDACTED_API_KEY]", text)
+    text = re.sub(r"https?://\S+", "[URL_DIHAPUS]", text)
+    return text

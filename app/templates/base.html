@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{ title or 'JobChat V4' }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div><strong>JobChat V4 Final</strong></div>
+    <div>
+      <a href="/">Home</a> |
+      <a href="/auto-apply">Auto Apply</a> |
+      <a href="/babyagi">BabyAGI</a> |
+      <a href="/cody">Cody</a>
+    </div>
+  </header>
+  <div class="container">{% block content %}{% endblock %}</div>
+</body>
+</html>

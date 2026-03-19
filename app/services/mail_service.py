@@ -1,7 +1,6 @@
 from __future__ import annotations
-
-from pathlib import Path
 import smtplib
+from pathlib import Path
 from email.message import EmailMessage
 
 class MailService:
@@ -9,34 +8,26 @@ class MailService:
         self.gmail_address = gmail_address
         self.gmail_app_password = gmail_app_password
 
-    def send_email(self, to_email: str, subject: str, body: str, attachments: list[dict]) -> None:
+    def send(self, to_email: str, subject: str, body: str, attachments: list[dict]):
         msg = EmailMessage()
-        msg["Subject"] = subject
         msg["From"] = self.gmail_address
         msg["To"] = to_email
+        msg["Subject"] = subject
         msg.set_content(body)
-
         for item in attachments:
             path = Path(item["file_path"])
             if not path.exists():
                 continue
             data = path.read_bytes()
-            suffix = path.suffix.lower()
+            ext = path.suffix.lower()
             subtype = "octet-stream"
-            if suffix == ".pdf":
+            if ext == ".pdf":
                 subtype = "pdf"
-            elif suffix == ".doc":
+            elif ext == ".doc":
                 subtype = "msword"
-            elif suffix == ".docx":
+            elif ext == ".docx":
                 subtype = "vnd.openxmlformats-officedocument.wordprocessingml.document"
-
-            msg.add_attachment(
-                data,
-                maintype="application",
-                subtype=subtype,
-                filename=path.name,
-            )
-
+            msg.add_attachment(data, maintype="application", subtype=subtype, filename=path.name)
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
             smtp.login(self.gmail_address, self.gmail_app_password)
             smtp.send_message(msg)

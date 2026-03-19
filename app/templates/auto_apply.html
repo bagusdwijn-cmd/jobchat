@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Auto Apply via Email</h2>
+  <form action="/auto-apply/analyze" method="post" enctype="multipart/form-data">
+    <label>Pilih user Telegram (chat_id)</label>
+    <select name="chat_id" required>
+      {% for u in users %}
+        <option value="{{ u.chat_id }}">{{ u.chat_id }} - {{ u.full_name or "Tanpa nama" }}</option>
+      {% endfor %}
+    </select>
+    <label>Upload gambar lowongan</label>
+    <input type="file" name="job_image" accept="image/*" required>
+    <button type="submit">Analisa Lowongan</button>
+  </form>
+</div>
+
+{% if error %}<div class="card"><div class="error">{{ error }}</div></div>{% endif %}
+
+{% if preview %}
+<div class="card">
+  <h3>Preview</h3>
+  <p><strong>Perusahaan:</strong> {{ preview.company }}</p>
+  <p><strong>Email HR:</strong> {{ preview.email }}</p>
+  <p><strong>Posisi tersedia:</strong> {{ preview.available_positions|join(", ") }}</p>
+  <p><strong>Posisi dipilih AI:</strong> {{ preview.selected_position }}</p>
+  <p><strong>Subject:</strong> {{ preview.subject }}</p>
+  <p><strong>Lampiran:</strong> {{ attachments|join(", ") }}</p>
+  <pre>{{ preview.body }}</pre>
+  {% if preview.warnings %}
+    <div class="error">{% for w in preview.warnings %}- {{ w }}<br>{% endfor %}</div>
+  {% endif %}
+  <form action="/auto-apply/send/{{ application_id }}" method="post">
+    <button type="submit">Kirim Email Sekarang</button>
+  </form>
+</div>
+{% endif %}
+
+{% if send_result %}<div class="card"><div class="success">{{ send_result }}</div></div>{% endif %}
+{% endblock %}

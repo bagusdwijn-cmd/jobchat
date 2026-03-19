@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>Dashboard</h2>
+  <p class="small">API key provider hanya diinput lewat Telegram bot. Web ini memakai konfigurasi user yang sudah setup lewat Telegram.</p>
+</div>
+
+<div class="grid">
+  <div class="card"><h3>1. Auto Apply via Email</h3><p>Upload foto lowongan, AI pilih posisi terbaik, buat cover letter, lalu kirim email.</p><a href="/auto-apply">Buka fitur</a></div>
+  <div class="card"><h3>2. BabyAGI / AutoGPT style</h3><p>Pecah goal besar menjadi langkah kecil dan jalankan langkah dasar otomatis.</p><a href="/babyagi">Buka fitur</a></div>
+  <div class="card"><h3>3. Cody / Sourcegraph style</h3><p>Upload repo ZIP, lalu tanya apa saja ke AI berdasarkan konteks repo Anda.</p><a href="/cody">Buka fitur</a></div>
+</div>
+
+<div class="card">
+  <h3>User Telegram yang sudah setup</h3>
+  {% if users %}
+    {% for u in users %}
+      <div class="badge">chat_id: {{ u.chat_id }}</div>
+      <div class="badge">{{ u.full_name or "Tanpa nama" }}</div>
+      <div class="badge">{{ u.ai_provider or "-" }}</div>
+      <div class="badge">{{ u.ai_model or "-" }}</div>
+      <hr>
+    {% endfor %}
+  {% else %}
+    <p>Belum ada user setup. Buka bot Telegram lalu jalankan <code>/start</code>.</p>
+  {% endif %}
+</div>
+{% endblock %}
