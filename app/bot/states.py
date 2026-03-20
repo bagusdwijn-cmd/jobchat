@@ -14,3 +14,4 @@ class SetupStates(StatesGroup):
 class UploadStates(StatesGroup):
     waiting_new_cv = State()
     waiting_new_attachment = State()
+    waiting_cody_zip = State()

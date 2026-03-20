@@ -27,6 +27,7 @@ class Storage:
                     ai_base_url TEXT DEFAULT '',
                     ai_api_key_encrypted TEXT DEFAULT '',
                     setup_completed INTEGER DEFAULT 0,
+                    last_repo_index_id INTEGER,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
@@ -89,7 +90,7 @@ class Storage:
         allowed = {
             "full_name", "target_title", "skills", "portfolio", "linkedin", "extra_notes",
             "gmail_address", "gmail_app_password_encrypted", "ai_provider", "ai_model",
-            "ai_base_url", "ai_api_key_encrypted", "setup_completed"
+            "ai_base_url", "ai_api_key_encrypted", "setup_completed", "last_repo_index_id"
         }
         if field not in allowed:
             raise ValueError("Field user tidak diizinkan")
@@ -174,3 +175,17 @@ class Storage:
             cur = await db.execute("INSERT INTO repo_indexes (chat_id, repo_name, repo_path, index_json) VALUES (?, ?, ?, ?)", (chat_id, repo_name, repo_path, json.dumps(index_json, ensure_ascii=False)))
             await db.commit()
             return cur.lastrowid
+
+
+    async def get_repo_index(self, repo_id: int):
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cur = await db.execute("SELECT * FROM repo_indexes WHERE id = ?", (repo_id,))
+            row = await cur.fetchone()
+            return dict(row) if row else None
+
+    async def list_agent_runs(self, chat_id: int):
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cur = await db.execute("SELECT * FROM agent_runs WHERE chat_id = ? ORDER BY id DESC LIMIT 50", (chat_id,))
+            return [dict(r) for r in await cur.fetchall()]

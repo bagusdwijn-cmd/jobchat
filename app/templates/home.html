@@ -2,7 +2,7 @@
 {% block content %}
 <div class="card">
   <h2>Dashboard</h2>
-  <p class="small">API key provider hanya diinput lewat Telegram bot. Web ini memakai konfigurasi user yang sudah setup lewat Telegram.</p>
+  <p class="small">API key provider hanya diinput lewat Telegram bot. Semua 3 fitur bisa dijalankan dari Telegram dan web.</p>
 </div>
 
 <div class="grid">
@@ -13,6 +13,18 @@
 
 <div class="card">
   <h3>User Telegram yang sudah setup</h3>
+  <p>Telegram commands:</p>
+  <pre>/start
+/setup
+/profil
+/lampiran
+/setcv
+/tambahlampiran
+/daftar
+/babyagi &lt;goal&gt;
+/cody_upload
+/cody_ask &lt;instruksi&gt;
+Kirim foto lowongan untuk auto apply</pre>
   {% if users %}
     {% for u in users %}
       <div class="badge">chat_id: {{ u.chat_id }}</div>
